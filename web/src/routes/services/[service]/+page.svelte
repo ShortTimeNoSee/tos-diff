@@ -42,16 +42,23 @@
           <section>
             <div class="change-meta">
               <h2>{new Date(change.timestamp).toLocaleString()}</h2>
-              {#if change.sourceHash}
-                <button
-                  type="button"
-                  class="source-hash"
-                  title="Click to copy full hash: {change.sourceHash}"
-                  on:click={() => copyToClipboard(change.sourceHash)}
-                >
-                  Source Hash: {change.sourceHash.substring(0, 12)}...
-                </button>
-              {/if}
+              <div class="meta-controls">
+                {#if change.sourceHtmlFile}
+                  <a href="/data/{data.service.toLowerCase()}/{activeTab.toLowerCase().replace(/\s+/g, '-')}/{change.sourceHtmlFile}" target="_blank" class="source-link">
+                    View Source
+                  </a>
+                {/if}
+                {#if change.sourceHash}
+                  <button
+                    type="button"
+                    class="source-hash"
+                    title="Click to copy full hash: {change.sourceHash}"
+                    on:click={() => copyToClipboard(change.sourceHash)}
+                  >
+                    Source Hash: {change.sourceHash.substring(0, 12)}...
+                  </button>
+                {/if}
+              </div>
             </div>
             <div class="summary">
               {@html change.summary.join('')}
@@ -131,11 +138,31 @@
     margin-bottom: 1rem;
   }
 
+  .meta-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
   section h2 {
     font-size: 1rem;
     font-weight: normal;
     color: var(--text-secondary);
     margin: 0;
+  }
+
+  .source-link {
+    font-size: 0.8em;
+    color: var(--text-secondary);
+    text-decoration: none;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+  }
+
+  .source-link:hover {
+    background-color: var(--border);
+    text-decoration: underline;
   }
 
   .source-hash {

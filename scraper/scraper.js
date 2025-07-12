@@ -51,127 +51,6 @@ ${details.rawResponse}
   }
 }
 
-function splitIntoSentences(text) {
-  const cleanText = text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-  return cleanText.split(/(?<=[.?!])\s+/).filter(sentence => sentence.trim().length > 0);
-}
-
-function parseIntoSections(html) {
-  const sections = [];
-  const lines = html.split('\n');
-  let currentSection = null;
-  let currentContent = [];
-  
-  for (const line of lines) {
-    const headingMatch = line.match(/<h([1-6])[^>]*>(.*?)<\/h[1-6]>/i);
-    if (headingMatch) {
-      if (currentSection) {
-        sections.push({
-          title: currentSection.title,
-          content: currentContent.join('\n').trim(),
-          level: currentSection.level
-        });
-      }
-      
-      currentSection = {
-        title: headingMatch[2].replace(/<[^>]*>/g, '').trim(),
-        level: parseInt(headingMatch[1])
-      };
-      currentContent = [];
-    } else if (currentSection) {
-      currentContent.push(line);
-    }
-  }
-  
-  if (currentSection) {
-    sections.push({
-      title: currentSection.title,
-      content: currentContent.join('\n').trim(),
-      level: currentSection.level
-    });
-  }
-  
-  return sections;
-}
-
-function findSectionForSentence(sentence, sections) {
-  for (const section of sections) {
-    if (section.content.includes(sentence)) {
-      return section;
-    }
-  }
-  return null;
-}
-
-function createContextualDiff(oldText, newText) {
-  const oldSentences = splitIntoSentences(oldText);
-  const newSentences = splitIntoSentences(newText);
-  const newSections = parseIntoSections(newText);
-  
-  const result = [];
-  let i = 0, j = 0;
-  
-  while (i < oldSentences.length || j < newSentences.length) {
-    if (i < oldSentences.length && j < newSentences.length && oldSentences[i] === newSentences[j]) {
-      result.push({ type: 'unchanged', value: oldSentences[i] });
-      i++;
-      j++;
-    } else if (j < newSentences.length && (i >= oldSentences.length || !oldSentences.includes(newSentences[j]))) {
-      const section = findSectionForSentence(newSentences[j], newSections);
-      result.push({ 
-        type: 'added', 
-        value: newSentences[j],
-        context: section ? section.title : null
-      });
-      j++;
-    } else if (i < oldSentences.length && (j >= newSentences.length || !newSentences.includes(oldSentences[i]))) {
-      result.push({ type: 'removed', value: oldSentences[i] });
-      i++;
-    } else {
-      const section = findSectionForSentence(newSentences[j], newSections);
-      result.push({ type: 'removed', value: oldSentences[i] });
-      result.push({ 
-        type: 'added', 
-        value: newSentences[j],
-        context: section ? section.title : null
-      });
-      i++;
-      j++;
-    }
-  }
-  
-  return result;
-}
-
-function diffSentences(oldText, newText) {
-  const oldSentences = splitIntoSentences(oldText);
-  const newSentences = splitIntoSentences(newText);
-  
-  const result = [];
-  let i = 0, j = 0;
-  
-  while (i < oldSentences.length || j < newSentences.length) {
-    if (i < oldSentences.length && j < newSentences.length && oldSentences[i] === newSentences[j]) {
-      result.push({ type: 'unchanged', value: oldSentences[i] });
-      i++;
-      j++;
-    } else if (j < newSentences.length && (i >= oldSentences.length || !oldSentences.includes(newSentences[j]))) {
-      result.push({ type: 'added', value: newSentences[j] });
-      j++;
-    } else if (i < oldSentences.length && (j >= newSentences.length || !newSentences.includes(oldSentences[i]))) {
-      result.push({ type: 'removed', value: oldSentences[i] });
-      i++;
-    } else {
-      result.push({ type: 'removed', value: oldSentences[i] });
-      result.push({ type: 'added', value: newSentences[j] });
-      i++;
-      j++;
-    }
-  }
-  
-  return result;
-}
-
 function getRandomDelay() {
   return Math.floor(Math.random() * 6000) + 2000;
 }
@@ -206,7 +85,7 @@ async function scrapeDocument(page, cfg, docType, docSlug, url, selector, system
       }
     });
 
-    const storage = path.join('scraper/storage', cfg.service, docSlug);
+    const storage = path.resolve(scriptDirForEnv, 'storage', cfg.service, docSlug);
     await fs.mkdir(storage, { recursive: true });
     const prevFile = path.join(storage, 'prev.html');
     let prev = '';
@@ -230,33 +109,35 @@ async function scrapeDocument(page, cfg, docType, docSlug, url, selector, system
 
     await fs.writeFile(prevFile, clean);
     
-    const contextualDiff = createContextualDiff(prev, clean);
-    
-    const contextualChanges = contextualDiff
-      .filter(p => p.type === 'added' || p.type === 'removed')
-      .map(p => {
-        const prefix = p.type === 'added' ? '+' : '-';
-        const context = p.context ? ` [Section: ${p.context}]` : '';
-        return `${prefix}${p.value}${context}`;
-      });
-    
-    const diffText = contextualChanges.join('\n');
-    
-    const simpleDiff = contextualDiff.map(p => 
-      (p.type === 'added' ? '+' : p.type === 'removed' ? '-' : '') + p.value
-    ).join('\n');
+    const diff = diffLines(prev, clean);
 
-    const diffHtml = contextualDiff.map(p => {
-      const esc = p.value
-        .replace(/&/g,'&amp;')
-        .replace(/</g,'&lt;')
-        .replace(/>/g,'&gt;');
-      if (p.type === 'added') return `<div class="added">${esc}</div>`;
-      if (p.type === 'removed') return `<div class="removed">${esc}</div>`;
-      return `<div>${esc}</div>`;
+    const significantDiff = diff.filter(part => {
+        return part.added || part.removed || part.value.trim().length > 0;
+    });
+
+    if (!significantDiff.some(part => part.added || part.removed)) {
+        console.log(`No significant changes detected (whitespace only) for ${cfg.service} ${docType}`);
+        return;
+    }
+    
+    const diffText = significantDiff
+      .filter(p => p.added || p.removed)
+      .map(p => {
+        const prefix = p.added ? '+' : '-';
+        return p.value.split(/\r?\n/).map(line => `${prefix} ${line}`).join('\n');
+      })
+      .join('');
+    
+    const diffHtml = significantDiff.map(part => {
+      const className = part.added ? 'added' : part.removed ? 'removed' : '';
+      const escapedValue = part.value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      if (className) {
+        return `<div class="${className}">${escapedValue}</div>`;
+      }
+      return `<div>${escapedValue}</div>`;
     }).join('');
 
-    const prompt = `Summarize these ${docType} changes as a Markdown bullet list. Each change includes the section context where it occurred:\n\n${diffText}`;
+    const prompt = `Summarize these ${docType} changes as a Markdown bullet list. The changes are provided in a diff format, with lines prefixed by '+' for additions and '-' for removals. The diff contains HTML, so interpret it accordingly:\n\n${diffText}`;
     
     let completion;
     let lastError = null;
@@ -287,7 +168,7 @@ async function scrapeDocument(page, cfg, docType, docSlug, url, selector, system
       await fs.appendFile(FAILURES_LOG, logMessage);
       
       console.warn(`AI summary failed for ${cfg.service} ${docType} after ${AI_RETRIES} attempts. Logged to ${FAILURES_LOG}.`);
-      const outDir = path.join('web/static/data', cfg.service.toLowerCase(), docSlug);
+      const outDir = path.resolve(scriptDirForEnv, '../web/static/data', cfg.service.toLowerCase(), docSlug);
       await fs.mkdir(outDir, { recursive: true });
       const changesFile = path.join(outDir, 'changes.json');
       
@@ -326,10 +207,10 @@ async function scrapeDocument(page, cfg, docType, docSlug, url, selector, system
       .replace(/alert_admin\(\)/g, '')
       .trim()
       .split(/\r?\n/)
-      .filter(Boolean)
+      .filter(line => Boolean(line) && !line.includes('[ADMIN]'))
       .map(l => `<p>${l}</p>`);
 
-    const outDir = path.join('web/static/data', cfg.service.toLowerCase(), docSlug);
+    const outDir = path.resolve(scriptDirForEnv, '../web/static/data', cfg.service.toLowerCase(), docSlug);
     await fs.mkdir(outDir, { recursive: true });
     const changesFile = path.join(outDir, 'changes.json');
 
@@ -344,12 +225,17 @@ async function scrapeDocument(page, cfg, docType, docSlug, url, selector, system
       }
     } catch {}
 
+    const timestamp = new Date().toISOString();
+    const sourceHtmlFile = `${new Date(timestamp).getTime()}-source.html`;
+    await fs.writeFile(path.join(outDir, sourceHtmlFile), raw);
+
     data.changes.unshift({
-      timestamp: new Date().toISOString(),
+      timestamp: timestamp,
       type: docType,
       summary: summaryLines,
       diffHtml,
-      sourceHash
+      sourceHash,
+      sourceHtmlFile
     });
     await fs.writeFile(changesFile, JSON.stringify(data, null, 2));
     
