@@ -1,5 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
+import { createHash } from 'crypto';
 import puppeteer from 'puppeteer';
 import sanitizeHtml from 'sanitize-html';
 import { diffLines } from 'diff';
@@ -50,15 +51,11 @@ ${details.rawResponse}
   }
 }
 
-// Helper function to split text into sentences
 function splitIntoSentences(text) {
-  // Remove HTML tags and normalize whitespace
   const cleanText = text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-  // Split on sentence endings followed by whitespace
   return cleanText.split(/(?<=[.?!])\s+/).filter(sentence => sentence.trim().length > 0);
 }
 
-// Helper function to parse HTML into sections with headings
 function parseIntoSections(html) {
   const sections = [];
   const lines = html.split('\n');
@@ -66,10 +63,8 @@ function parseIntoSections(html) {
   let currentContent = [];
   
   for (const line of lines) {
-    // Check for heading tags
     const headingMatch = line.match(/<h([1-6])[^>]*>(.*?)<\/h[1-6]>/i);
     if (headingMatch) {
-      // Save previous section if exists
       if (currentSection) {
         sections.push({
           title: currentSection.title,
@@ -78,7 +73,6 @@ function parseIntoSections(html) {
         });
       }
       
-      // Start new section
       currentSection = {
         title: headingMatch[2].replace(/<[^>]*>/g, '').trim(),
         level: parseInt(headingMatch[1])
@@ -89,7 +83,6 @@ function parseIntoSections(html) {
     }
   }
   
-  // Add the last section
   if (currentSection) {
     sections.push({
       title: currentSection.title,
@@ -101,7 +94,6 @@ function parseIntoSections(html) {
   return sections;
 }
 
-// Helper function to find which section contains a given sentence
 function findSectionForSentence(sentence, sections) {
   for (const section of sections) {
     if (section.content.includes(sentence)) {
@@ -111,7 +103,6 @@ function findSectionForSentence(sentence, sections) {
   return null;
 }
 
-// Helper function to create contextual diff with surrounding content
 function createContextualDiff(oldText, newText) {
   const oldSentences = splitIntoSentences(oldText);
   const newSentences = splitIntoSentences(newText);
@@ -122,12 +113,10 @@ function createContextualDiff(oldText, newText) {
   
   while (i < oldSentences.length || j < newSentences.length) {
     if (i < oldSentences.length && j < newSentences.length && oldSentences[i] === newSentences[j]) {
-      // Sentences match, keep unchanged
       result.push({ type: 'unchanged', value: oldSentences[i] });
       i++;
       j++;
     } else if (j < newSentences.length && (i >= oldSentences.length || !oldSentences.includes(newSentences[j]))) {
-      // New sentence added
       const section = findSectionForSentence(newSentences[j], newSections);
       result.push({ 
         type: 'added', 
@@ -136,11 +125,9 @@ function createContextualDiff(oldText, newText) {
       });
       j++;
     } else if (i < oldSentences.length && (j >= newSentences.length || !newSentences.includes(oldSentences[i]))) {
-      // Old sentence removed
       result.push({ type: 'removed', value: oldSentences[i] });
       i++;
     } else {
-      // Handle case where sentences are similar but not identical
       const section = findSectionForSentence(newSentences[j], newSections);
       result.push({ type: 'removed', value: oldSentences[i] });
       result.push({ 
@@ -156,7 +143,6 @@ function createContextualDiff(oldText, newText) {
   return result;
 }
 
-// Helper function to create sentence-based diff (legacy, for backward compatibility)
 function diffSentences(oldText, newText) {
   const oldSentences = splitIntoSentences(oldText);
   const newSentences = splitIntoSentences(newText);
@@ -166,20 +152,16 @@ function diffSentences(oldText, newText) {
   
   while (i < oldSentences.length || j < newSentences.length) {
     if (i < oldSentences.length && j < newSentences.length && oldSentences[i] === newSentences[j]) {
-      // Sentences match, keep unchanged
       result.push({ type: 'unchanged', value: oldSentences[i] });
       i++;
       j++;
     } else if (j < newSentences.length && (i >= oldSentences.length || !oldSentences.includes(newSentences[j]))) {
-      // New sentence added
       result.push({ type: 'added', value: newSentences[j] });
       j++;
     } else if (i < oldSentences.length && (j >= newSentences.length || !newSentences.includes(oldSentences[i]))) {
-      // Old sentence removed
       result.push({ type: 'removed', value: oldSentences[i] });
       i++;
     } else {
-      // Handle case where sentences are similar but not identical
       result.push({ type: 'removed', value: oldSentences[i] });
       result.push({ type: 'added', value: newSentences[j] });
       i++;
@@ -213,6 +195,8 @@ async function scrapeDocument(page, cfg, docType, docSlug, url, selector, system
       return;
     }
 
+    const sourceHash = createHash('sha256').update(raw).digest('hex');
+
     const clean = sanitizeHtml(raw, {
       allowedTags: [
         'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'a', 'b', 'i', 'strong', 'em', 'ul', 'ol', 'li', 'blockquote', 'pre', 'code', 'br', 'hr', 'table', 'thead', 'tbody', 'tr', 'th', 'td'
@@ -238,7 +222,6 @@ async function scrapeDocument(page, cfg, docType, docSlug, url, selector, system
       return;
     }
 
-    // On the first run, just save the file and exit
     if (isFirstRun) {
       await fs.writeFile(prevFile, clean);
       console.log(`Initial content saved for ${cfg.service} ${docType}. No diff generated on first run.`);
@@ -247,10 +230,8 @@ async function scrapeDocument(page, cfg, docType, docSlug, url, selector, system
 
     await fs.writeFile(prevFile, clean);
     
-    // Use contextual diffing to provide better context to AI
     const contextualDiff = createContextualDiff(prev, clean);
     
-    // Build contextual prompt with section information
     const contextualChanges = contextualDiff
       .filter(p => p.type === 'added' || p.type === 'removed')
       .map(p => {
@@ -261,7 +242,6 @@ async function scrapeDocument(page, cfg, docType, docSlug, url, selector, system
     
     const diffText = contextualChanges.join('\n');
     
-    // Create simple diff for HTML display (without context)
     const simpleDiff = contextualDiff.map(p => 
       (p.type === 'added' ? '+' : p.type === 'removed' ? '-' : '') + p.value
     ).join('\n');
@@ -291,13 +271,13 @@ async function scrapeDocument(page, cfg, docType, docSlug, url, selector, system
           ],
           reasoning_effort: 'high'
         });
-        lastError = null; // Clear error on success
-        break; // Exit loop on success
+        lastError = null;
+        break;
       } catch (error) {
         lastError = error;
         console.warn(`AI completion failed for ${cfg.service} ${docType} (attempt ${i + 1}/${AI_RETRIES}):`, error.message);
         if (i < AI_RETRIES - 1) {
-          await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2s before retry
+          await new Promise(resolve => setTimeout(resolve, 2000));
         }
       }
     }
@@ -329,7 +309,7 @@ async function scrapeDocument(page, cfg, docType, docSlug, url, selector, system
         diffHtml
       });
       await fs.writeFile(changesFile, JSON.stringify(data, null, 2));
-      return; // End execution for this document
+      return;
     }
     
     const aiResponse = completion.choices[0].message.content;
@@ -343,7 +323,7 @@ async function scrapeDocument(page, cfg, docType, docSlug, url, selector, system
     }
 
     const summaryLines = aiResponse
-      .replace(/alert_admin\(\)/g, '') // Remove the function call from the output
+      .replace(/alert_admin\(\)/g, '')
       .trim()
       .split(/\r?\n/)
       .filter(Boolean)
@@ -358,7 +338,7 @@ async function scrapeDocument(page, cfg, docType, docSlug, url, selector, system
       const fileContent = await fs.readFile(changesFile, 'utf-8');
       const existingData = JSON.parse(fileContent);
       if (Array.isArray(existingData)) {
-        data.changes = existingData; // Convert old format
+        data.changes = existingData;
       } else if (existingData && typeof existingData === 'object') {
         data = existingData;
       }
@@ -368,7 +348,8 @@ async function scrapeDocument(page, cfg, docType, docSlug, url, selector, system
       timestamp: new Date().toISOString(),
       type: docType,
       summary: summaryLines,
-      diffHtml
+      diffHtml,
+      sourceHash
     });
     await fs.writeFile(changesFile, JSON.stringify(data, null, 2));
     
@@ -404,7 +385,6 @@ async function main() {
   const systemPromptPath = path.resolve(scriptDir, 'system_prompt.txt');
   const systemPrompt = await fs.readFile(systemPromptPath, 'utf-8');
   
-  // Ensure the web data directory exists
   await fs.mkdir('web/static/data', { recursive: true });
   
   let browser;

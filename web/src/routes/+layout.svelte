@@ -2,9 +2,13 @@
   import './+layout.css';
 </script>
 
-<nav>
-  <a href="/">Home</a>
-  <a href="/disclaimer" style="margin-left: 1rem;">Disclaimer</a>
-</nav>
+<header>
+  <a href="/" class="logo">Legal Document Changes</a>
+  <nav>
+    <a href="/disclaimer">Disclaimer</a>
+  </nav>
+</header>
 
-<slot />
+<main>
+  <slot />
+</main>

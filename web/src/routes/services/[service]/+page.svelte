@@ -2,13 +2,22 @@
   export let data;
 
   let activeTab = data.activeTab;
-  
+
   function setActiveTab(tab) {
     activeTab = tab;
   }
+
+  async function copyToClipboard(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      alert('Hash copied to clipboard!');
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+    }
+  }
 </script>
 
-<h1><a href="/">{data.service}</a> Legal Document Changes</h1>
+<h1>{data.service} Legal Document Changes</h1>
 
 {#if data.documents && Object.keys(data.documents).length > 0}
   <div class="tabs">
@@ -31,7 +40,19 @@
       {:else}
         {#each currentDoc.changes as change}
           <section>
-            <h2>{new Date(change.timestamp).toLocaleString()}</h2>
+            <div class="change-meta">
+              <h2>{new Date(change.timestamp).toLocaleString()}</h2>
+              {#if change.sourceHash}
+                <button
+                  type="button"
+                  class="source-hash"
+                  title="Click to copy full hash: {change.sourceHash}"
+                  on:click={() => copyToClipboard(change.sourceHash)}
+                >
+                  Source Hash: {change.sourceHash.substring(0, 12)}...
+                </button>
+              {/if}
+            </div>
             <div class="summary">
               {@html change.summary.join('')}
             </div>
@@ -51,9 +72,8 @@
 {/if}
 
 <style>
-  h1 a {
-    text-decoration: none;
-    color: inherit;
+  h1 {
+    text-transform: none;
   }
   .tabs {
     display: flex;
@@ -61,7 +81,7 @@
     margin-bottom: 2rem;
     border-bottom: 1px solid var(--border);
   }
-  
+
   .tabs button {
     padding: 0.75rem 1.25rem;
     border: none;
@@ -80,7 +100,7 @@
     opacity: 0.5;
     cursor: not-allowed;
   }
-  
+
   .tabs button.active {
     background: var(--background);
     color: var(--primary);
@@ -91,11 +111,11 @@
     background-color: var(--surface);
     color: var(--text-primary);
   }
-  
+
   .content {
     margin-top: 1rem;
   }
-  
+
   section {
     margin-bottom: 2rem;
     padding: 1.5rem;
@@ -104,13 +124,37 @@
     background-color: var(--surface);
   }
 
+  .change-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
   section h2 {
     font-size: 1rem;
     font-weight: normal;
     color: var(--text-secondary);
-    margin-top: 0;
+    margin: 0;
   }
-  
+
+  .source-hash {
+    font-family: 'Roboto Mono', monospace;
+    font-size: 0.8em;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    background: none;
+    border: none;
+    text-align: left;
+  }
+
+  .source-hash:hover {
+    background-color: var(--border);
+  }
+
   .summary {
     margin: 1rem 0;
   }
@@ -118,7 +162,7 @@
   .summary :global(p) {
     margin: 0.5rem 0;
   }
-  
+
   details {
     margin-top: 1.5rem;
   }
@@ -132,7 +176,7 @@
   details summary:hover {
     color: var(--primary);
   }
-  
+
   .diff {
     margin-top: 1rem;
     padding: 1rem;

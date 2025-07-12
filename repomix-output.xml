@@ -40,6 +40,9 @@ The content is organized as follows:
 </file_summary>
 
 <directory_structure>
+.github/
+  workflows/
+    scraper.yml
 scraper/
   .env
   package.json
@@ -47,13 +50,21 @@ scraper/
   system_prompt.txt
 service-config/
   google.json
+  sidebysearch.json
 web/
   src/
     lib/
       services.js
     routes/
+      api/
+        services/
+          [service]/
+            +server.js
+      disclaimer/
+        +page.svelte
       services/
         [service]/
+          +page.js
           +page.svelte
       +layout.css
       +layout.svelte
@@ -101,7 +112,9 @@ import sanitizeHtml from 'sanitize-html';
 import { diffLines } from 'diff';
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
-dotenv.config();
+
+const scriptDirForEnv = path.dirname(import.meta.url.substring(7));
+dotenv.config({ path: path.resolve(scriptDirForEnv, '.env') });
 
 const xai = new OpenAI({
   apiKey: process.env.XAI_API_KEY,
@@ -288,7 +301,7 @@ function getRandomDelay() {
   return Math.floor(Math.random() * 6000) + 2000;
 }
 
-async function scrapeDocument(page, cfg, docType, url, selector, systemPrompt) {
+async function scrapeDocument(page, cfg, docType, docSlug, url, selector, systemPrompt) {
   try {
     console.log(`Scraping ${cfg.service} ${docType}...`);
     
@@ -308,16 +321,34 @@ async function scrapeDocument(page, cfg, docType, url, selector, systemPrompt) {
     }
 
     const clean = sanitizeHtml(raw, {
-      allowedTags: sanitizeHtml.defaults.allowedTags.concat(['h1','h2','h3','h4','h5','h6'])
+      allowedTags: [
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'a', 'b', 'i', 'strong', 'em', 'ul', 'ol', 'li', 'blockquote', 'pre', 'code', 'br', 'hr', 'table', 'thead', 'tbody', 'tr', 'th', 'td'
+      ],
+      allowedAttributes: {
+        'a': ['href', 'target', 'rel']
+      }
     });
 
-    const storage = path.join('scraper/storage', cfg.service, docType);
+    const storage = path.join('scraper/storage', cfg.service, docSlug);
     await fs.mkdir(storage, { recursive: true });
     const prevFile = path.join(storage, 'prev.html');
     let prev = '';
-    try { prev = await fs.readFile(prevFile, 'utf-8'); } catch {}
+    let isFirstRun = false;
+    try {
+      prev = await fs.readFile(prevFile, 'utf-8');
+    } catch {
+      isFirstRun = true;
+    }
+
     if (prev === clean) {
       console.log(`No changes detected for ${cfg.service} ${docType}`);
+      return;
+    }
+
+    // On the first run, just save the file and exit
+    if (isFirstRun) {
+      await fs.writeFile(prevFile, clean);
+      console.log(`Initial content saved for ${cfg.service} ${docType}. No diff generated on first run.`);
       return;
     }
 
@@ -383,11 +414,11 @@ async function scrapeDocument(page, cfg, docType, url, selector, systemPrompt) {
       await fs.appendFile(FAILURES_LOG, logMessage);
       
       console.warn(`AI summary failed for ${cfg.service} ${docType} after ${AI_RETRIES} attempts. Logged to ${FAILURES_LOG}.`);
-      const outDir = path.join('web/static/data', cfg.service.toLowerCase(), docType);
+      const outDir = path.join('web/static/data', cfg.service.toLowerCase(), docSlug);
       await fs.mkdir(outDir, { recursive: true });
       const changesFile = path.join(outDir, 'changes.json');
       
-      let data = { schemaVersion: 1, changes: [] };
+      let data = { schemaVersion: 2, changes: [] };
       try {
         const fileContent = await fs.readFile(changesFile, 'utf-8');
         const existingData = JSON.parse(fileContent);
@@ -425,11 +456,11 @@ async function scrapeDocument(page, cfg, docType, url, selector, systemPrompt) {
       .filter(Boolean)
       .map(l => `<p>${l}</p>`);
 
-    const outDir = path.join('web/static/data', cfg.service.toLowerCase(), docType);
+    const outDir = path.join('web/static/data', cfg.service.toLowerCase(), docSlug);
     await fs.mkdir(outDir, { recursive: true });
     const changesFile = path.join(outDir, 'changes.json');
 
-    let data = { schemaVersion: 1, changes: [] };
+    let data = { schemaVersion: 2, changes: [] };
     try {
       const fileContent = await fs.readFile(changesFile, 'utf-8');
       const existingData = JSON.parse(fileContent);
@@ -456,25 +487,39 @@ async function scrapeDocument(page, cfg, docType, url, selector, systemPrompt) {
 }
 
 async function scrapeService(page, cfg, systemPrompt) {
-  // Scrape Terms of Service
-  if (cfg.tos_url && cfg.tos_selector) {
-    await scrapeDocument(page, cfg, 'tos', cfg.tos_url, cfg.tos_selector, systemPrompt);
-  }
-  
-  // Scrape Privacy Policy
-  if (cfg.privacy_url && cfg.privacy_selector) {
-    await scrapeDocument(page, cfg, 'privacy', cfg.privacy_url, cfg.privacy_selector, systemPrompt);
+  if (!cfg.documents) return;
+
+  const docTypes = Object.keys(cfg.documents);
+  for (let i = 0; i < docTypes.length; i++) {
+    const docType = docTypes[i];
+    const docConfig = cfg.documents[docType];
+    if (docConfig.url && docConfig.selector) {
+      const docSlug = docType.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '');
+      await scrapeDocument(page, cfg, docType, docSlug, docConfig.url, docConfig.selector, systemPrompt);
+    }
+    
+    if (i < docTypes.length - 1) {
+      const delay = getRandomDelay();
+      console.log(`Waiting ${delay / 1000}s before next scrape...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
   }
 }
 
 async function main() {
-  const systemPrompt = await fs.readFile('scraper/system_prompt.txt', 'utf-8');
+  const scriptDir = path.dirname(import.meta.url.substring(7));
+  const systemPromptPath = path.resolve(scriptDir, 'system_prompt.txt');
+  const systemPrompt = await fs.readFile(systemPromptPath, 'utf-8');
+  
+  // Ensure the web data directory exists
+  await fs.mkdir('web/static/data', { recursive: true });
+  
   let browser;
   try {
     console.log('Launching browser...');
     browser = await puppeteer.launch({ args: ['--no-sandbox'] });
     
-    const cfgDir = path.resolve('service-config');
+    const cfgDir = path.resolve(scriptDir, '../service-config');
     const files = await fs.readdir(cfgDir);
     
     for (const f of files) {
@@ -487,12 +532,6 @@ async function main() {
         await scrapeService(page, cfg, systemPrompt);
       } finally {
         await page.close();
-      }
-      
-      if (files.indexOf(f) < files.length - 1) {
-        const delay = getRandomDelay();
-        console.log(`Waiting ${delay/1000}s before next scrape...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
   } catch (error) {
@@ -549,158 +588,243 @@ You are a legal-change assistant. When you receive HTML diffs of Terms of Servic
 <file path="service-config/google.json">
 {
   "service": "Google",
-  "tos_url": "https://policies.google.com/terms",
-  "privacy_url": "https://policies.google.com/privacy",
-  "tos_selector": "#main-content",
-  "privacy_selector": "#main-content",
+  "documents": {
+    "Terms of Service": {
+      "url": "https://policies.google.com/terms",
+      "selector": "#main-content"
+    },
+    "Privacy Policy": {
+      "url": "https://policies.google.com/privacy",
+      "selector": "#main-content"
+    }
+  },
   "aliases": ["Google", "Alphabet"]
 }
 </file>
 
+<file path="service-config/sidebysearch.json">
+{
+  "service": "SideBySearch",
+  "documents": {
+    "Privacy Policy": {
+      "url": "https://sidebysearch.org/privacy",
+      "selector": "main"
+    }
+  }
+}
+</file>
+
 <file path="web/src/lib/services.js">
-export default ['google'];
+export default ['google', 'sidebysearch'];
+</file>
+
+<file path="web/src/routes/api/services/[service]/+server.js">
+import fs from 'fs/promises';
+import path from 'path';
+
+export async function GET({ params }) {
+  try {
+    const serviceName = params.service.toLowerCase();
+    
+    // Construct the path to the config file from the project root.
+    const configPath = path.resolve('service-config', `${serviceName}.json`);
+    
+    const fileContent = await fs.readFile(configPath, 'utf-8');
+    const config = JSON.parse(fileContent);
+    
+    const documents = Object.keys(config.documents || {});
+    
+    return new Response(JSON.stringify({ documents }), {
+      headers: { 'Content-Type': 'application/json' },
+      status: 200
+    });
+
+  } catch (error) {
+    // If the file doesn't exist or there's an error, return a 404.
+    return new Response(JSON.stringify({ error: 'Service not found' }), {
+      status: 404,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+}
+</file>
+
+<file path="web/src/routes/disclaimer/+page.svelte">
+<h1>Disclaimer</h1>
+
+<p><strong>No Affiliation:</strong> This website is an independent project and is not affiliated with, endorsed by, or in any way officially connected with any of the companies whose terms of service or privacy policies are displayed here. All company names, logos, and trademarks are the property of their respective owners.</p>
+
+<p><strong>For Informational Purposes Only:</strong> The content provided on this website is for informational purposes only. It is automatically scraped from public sources and is presented without any alteration or manual review. The goal is to provide a convenient way to track changes to these legal documents over time.</p>
+
+<p><strong>No Legal Advice:</strong> The information on this site does not constitute, and should not be relied upon as, legal advice. We make no representations or warranties of any kind, express or implied, about the completeness, accuracy, reliability, suitability, or availability of the information contained on the website.</p>
+
+<p><strong>Verify Information:</strong> We strongly encourage all users to review the official terms of service and privacy policies directly on the respective companies' websites before making any decisions based on the information presented here. Your legal rights and obligations are determined by the original documents.</p>
+
+<p><strong>Limitation of Liability:</strong> In no event will we be liable for any loss or damage including without limitation, indirect or consequential loss or damage, or any loss or damage whatsoever arising from loss of data or profits arising out of, or in connection with, the use of this website.</p>
+
+<style>
+  h1 {
+    margin-bottom: 2rem;
+  }
+  p {
+    margin-bottom: 1rem;
+    line-height: 1.6;
+    max-width: 80ch;
+  }
+  p strong {
+    color: var(--text-primary);
+    font-weight: 700;
+  }
+</style>
+</file>
+
+<file path="web/src/routes/services/[service]/+page.js">
+export async function load({ params, fetch }) {
+  try {
+    const svc = params.service.toLowerCase();
+
+    // 1. Fetch the list of documents for the service
+    const docsRes = await fetch(`/api/services/${svc}`);
+    if (!docsRes.ok) {
+      // Return a default structure if the service config doesn't exist.
+      return { service: params.service, documents: {}, activeTab: null };
+    }
+    const { documents: docNames } = await docsRes.json();
+
+    // 2. Create fetch promises for each document's changes
+    const slugify = (text) => text.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '');
+    const promises = docNames.map(docName =>
+      fetch(`/data/${svc}/${slugify(docName)}/changes.json`)
+    );
+    const results = await Promise.allSettled(promises);
+
+    // 3. Process results into a structured object
+    const documents = {};
+    for (let i = 0; i < docNames.length; i++) {
+      const docName = docNames[i];
+      const res = results[i];
+      let changes = [];
+      if (res.status === 'fulfilled' && res.value.ok) {
+        const data = await res.value.json();
+        // Support both old and new schema versions
+        changes = data.changes || (Array.isArray(data) ? data : []);
+      }
+      documents[docName] = { changes };
+    }
+
+    // 4. Return props for the page
+    return {
+      service: params.service,
+      documents,
+      // Set the first available document as the active one
+      activeTab: docNames.length > 0 ? docNames[0] : null
+    };
+
+  } catch (error) {
+    console.error("Failed to load service changes:", error);
+    // Return default props on error to prevent a crash
+    return {
+      service: params.service,
+      documents: {},
+      activeTab: null
+    };
+  }
+}
 </file>
 
 <file path="web/src/routes/services/[service]/+page.svelte">
-<script context="module">
-  export async function load({ params, fetch }) {
-    const svc = params.service.toLowerCase();
-    
-    const [tosRes, privacyRes] = await Promise.allSettled([
-      fetch(`/data/${svc}/tos/changes.json`),
-      fetch(`/data/${svc}/privacy/changes.json`)
-    ]);
-    
-    let tosChanges = [];
-    if (tosRes.status === 'fulfilled' && tosRes.value.ok) {
-      const data = await tosRes.value.json();
-      tosChanges = Array.isArray(data) ? data : data.changes || [];
-    }
-    
-    let privacyChanges = [];
-    if (privacyRes.status === 'fulfilled' && privacyRes.value.ok) {
-      const data = await privacyRes.value.json();
-      privacyChanges = Array.isArray(data) ? data : data.changes || [];
-    }
-    
-    if (tosChanges.length === 0 && privacyChanges.length === 0) {
-      const legacyRes = await fetch(`/data/${svc}/changes.json`);
-      if (legacyRes.ok) {
-        const legacyData = await legacyRes.json();
-        const legacyChanges = Array.isArray(legacyData) ? legacyData : legacyData.changes || [];
-        return { 
-          props: { 
-            service: params.service, 
-            tosChanges: legacyChanges,
-            privacyChanges: [],
-            activeTab: 'tos'
-          } 
-        };
-      }
-    }
-    
-    return { 
-      props: { 
-        service: params.service, 
-        tosChanges,
-        privacyChanges,
-        activeTab: 'tos'
-      } 
-    };
-  }
-</script>
-
 <script>
-  export let service;
-  export let tosChanges;
-  export let privacyChanges;
-  export let activeTab;
+  export let data;
+
+  let activeTab = data.activeTab;
   
   function setActiveTab(tab) {
     activeTab = tab;
   }
 </script>
 
-<h1>{service} Legal Document Changes</h1>
+<h1><a href="/">{data.service}</a> Legal Document Changes</h1>
 
-<div class="tabs">
-  <button 
-    class:active={activeTab === 'tos'} 
-    on:click={() => setActiveTab('tos')}
-  >
-    Terms of Service ({tosChanges.length})
-  </button>
-  <button 
-    class:active={activeTab === 'privacy'} 
-    on:click={() => setActiveTab('privacy')}
-  >
-    Privacy Policy ({privacyChanges.length})
-  </button>
-</div>
-
-{#if activeTab === 'tos'}
-  <div class="content">
-    {#if tosChanges.length === 0}
-      <p>No Terms of Service changes detected yet.</p>
-    {:else}
-      {#each tosChanges as change}
-        <section>
-          <h2>{new Date(change.timestamp).toLocaleString()}</h2>
-          <div class="summary">
-            {@html change.summary.join('')}
-          </div>
-          <details>
-            <summary>View full diff</summary>
-            <div class="diff">
-              {@html change.diffHtml}
-            </div>
-          </details>
-        </section>
-      {/each}
-    {/if}
+{#if data.documents && Object.keys(data.documents).length > 0}
+  <div class="tabs">
+    {#each Object.keys(data.documents) as docName}
+      <button
+        class:active={activeTab === docName}
+        on:click={() => setActiveTab(docName)}
+        disabled={data.documents[docName].changes.length === 0}
+      >
+        {docName} ({data.documents[docName].changes.length})
+      </button>
+    {/each}
   </div>
+
+  {#if activeTab && data.documents[activeTab]}
+    {@const currentDoc = data.documents[activeTab]}
+    <div class="content">
+      {#if currentDoc.changes.length === 0}
+        <p>No {activeTab} changes detected yet.</p>
+      {:else}
+        {#each currentDoc.changes as change}
+          <section>
+            <h2>{new Date(change.timestamp).toLocaleString()}</h2>
+            <div class="summary">
+              {@html change.summary.join('')}
+            </div>
+            <details>
+              <summary>View full diff</summary>
+              <div class="diff">
+                {@html change.diffHtml}
+              </div>
+            </details>
+          </section>
+        {/each}
+      {/if}
+    </div>
+  {/if}
 {:else}
-  <div class="content">
-    {#if privacyChanges.length === 0}
-      <p>No Privacy Policy changes detected yet.</p>
-    {:else}
-      {#each privacyChanges as change}
-        <section>
-          <h2>{new Date(change.timestamp).toLocaleString()}</h2>
-          <div class="summary">
-            {@html change.summary.join('')}
-          </div>
-          <details>
-            <summary>View full diff</summary>
-            <div class="diff">
-              {@html change.diffHtml}
-            </div>
-          </details>
-        </section>
-      {/each}
-    {/if}
-  </div>
+  <p>No documents are configured for this service yet.</p>
 {/if}
 
 <style>
+  h1 a {
+    text-decoration: none;
+    color: inherit;
+  }
   .tabs {
     display: flex;
-    gap: 1rem;
+    gap: 0.5rem;
     margin-bottom: 2rem;
+    border-bottom: 1px solid var(--border);
   }
   
   .tabs button {
-    padding: 0.5rem 1rem;
-    border: 1px solid #ccc;
-    background: #f5f5f5;
+    padding: 0.75rem 1.25rem;
+    border: none;
+    background: transparent;
     cursor: pointer;
-    border-radius: 4px;
+    border-radius: 6px 6px 0 0;
+    font-size: 1rem;
+    color: var(--text-secondary);
+    position: relative;
+    top: 1px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  .tabs button:disabled {
+    color: var(--text-secondary);
+    opacity: 0.5;
+    cursor: not-allowed;
   }
   
   .tabs button.active {
-    background: #007bff;
-    color: white;
-    border-color: #007bff;
+    background: var(--background);
+    color: var(--primary);
+    border-bottom: 2px solid var(--primary);
+  }
+
+  .tabs button:not(.active):not(:disabled):hover {
+    background-color: var(--surface);
+    color: var(--text-primary);
   }
   
   .content {
@@ -709,60 +833,124 @@ export default ['google'];
   
   section {
     margin-bottom: 2rem;
-    padding: 1rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
+    padding: 1.5rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background-color: var(--surface);
+  }
+
+  section h2 {
+    font-size: 1rem;
+    font-weight: normal;
+    color: var(--text-secondary);
+    margin-top: 0;
   }
   
   .summary {
     margin: 1rem 0;
   }
+
+  .summary :global(p) {
+    margin: 0.5rem 0;
+  }
+  
+  details {
+    margin-top: 1.5rem;
+  }
+
+  details summary {
+    cursor: pointer;
+    font-weight: bold;
+    color: var(--text-secondary);
+  }
+
+  details summary:hover {
+    color: var(--primary);
+  }
   
   .diff {
     margin-top: 1rem;
     padding: 1rem;
-    background: #f8f9fa;
+    background: var(--background);
     border-radius: 4px;
-    font-family: monospace;
+    font-family: 'Roboto Mono', monospace;
     white-space: pre-wrap;
-  }
-  
-  .added {
-    background: #d4edda;
-    color: #155724;
-  }
-  
-  .removed {
-    background: #f8d7da;
-    color: #721c24;
+    font-size: 0.9em;
+    border: 1px solid var(--border);
   }
 </style>
 </file>
 
 <file path="web/src/routes/+layout.css">
+:root {
+  --background: #1a1d21;
+  --surface: #2a2d31;
+  --primary: #4f89f2;
+  --on-primary: #ffffff;
+  --text-primary: #e1e1e6;
+  --text-secondary: #c4c4cc;
+  --border: #3a3d41;
+  --added-bg: rgba(77, 182, 172, 0.1);
+  --removed-bg: rgba(244, 67, 54, 0.1);
+  --added-color: #4db6ac;
+  --removed-color: #f44336;
+}
+
 .added {
-  background-color: #e6ffed;
+  background-color: var(--added-bg);
+  color: var(--added-color);
 }
 .removed {
-  background-color: #ffeef0;
+  background-color: var(--removed-bg);
+  color: var(--removed-color);
 }
+
 body {
-  font-family: system-ui, sans-serif;
-  margin: 2rem;
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+  padding: 2rem;
+  background-color: var(--background);
+  color: var(--text-primary);
+  line-height: 1.6;
 }
+
+nav {
+  display: flex;
+  gap: 1.5rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2rem;
+}
+
 nav a {
   text-decoration: none;
   font-weight: bold;
+  color: var(--text-secondary);
+  transition: color 0.2s ease-in-out;
+}
+
+nav a:hover {
+  color: var(--primary);
+}
+
+h1, h2, h3 {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+a {
+  color: var(--primary);
 }
 </file>
 
 <file path="web/src/routes/+layout.svelte">
 <script>
-  export let data;
+  import './+layout.css';
 </script>
 
 <nav>
   <a href="/">Home</a>
+  <a href="/disclaimer" style="margin-left: 1rem;">Disclaimer</a>
 </nav>
 
 <slot />
@@ -788,25 +976,50 @@ nav a {
     <meta charset="utf-8" />
     <link rel="icon" href="%sveltekit.assets%/favicon.png" />
     <meta name="viewport" content="width=device-width" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Roboto+Mono&display=swap" rel="stylesheet">
     %sveltekit.head%
   </head>
   <body>
-    %sveltekit.body%
+    <div style="display: contents">
+      %sveltekit.body%
+    </div>
   </body>
 </html>
 </file>
 
 <file path="web/src/hooks.server.js">
+import { dev } from '$app/environment';
+
 export const handle = async ({ event, resolve }) => {
   const response = await resolve(event);
-  response.headers.set(
-    'Content-Security-Policy',
-    "default-src 'self'; style-src 'self';"
-  );
-  response.headers.set(
-    'Strict-Transport-Security',
-    'max-age=31536000; includeSubDomains'
-  );
+
+  // Apply security headers only to top-level page responses,
+  // not to sub-requests made by `load` functions.
+  if (!event.isSubRequest) {
+    const csp = [
+      "default-src 'self'",
+      // Vite's HMR client requires 'unsafe-inline' for scripts in dev
+      `script-src 'self' ${dev ? "'unsafe-inline'" : ''}`,
+      // Google Fonts requires fonts.googleapis.com for styles.
+      // SvelteKit's dev server injects styles inline, so we need 'unsafe-inline' in dev.
+      `style-src 'self' https://fonts.googleapis.com ${dev ? "'unsafe-inline'" : ''}`,
+      // Allow font files from Google's static domain
+      "font-src 'self' https://fonts.gstatic.com",
+      // Allow websocket connection for Vite's HMR
+      `connect-src 'self' ${dev ? 'ws:' : ''}`,
+    ]
+      .join('; ')
+      .trim();
+
+    response.headers.set('Content-Security-Policy', csp);
+    response.headers.set(
+      'Strict-Transport-Security',
+      'max-age=31536000; includeSubDomains'
+    );
+  }
+
   return response;
 };
 </file>
@@ -873,6 +1086,61 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   plugins: [sveltekit()]
 });
+</file>
+
+<file path=".github/workflows/scraper.yml">
+name: Automated Document Scraper
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: |
+        cd scraper
+        npm install
+        
+    - name: Run scraper
+      env:
+        # These secrets are configured in GitHub repository settings
+        XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+        DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      run: |
+        node scraper/scraper.js
+        
+    - name: Check for changes
+      id: check_changes
+      run: |
+        if [ -n "$(git status --porcelain)" ]; then
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+        else
+          echo "has_changes=false" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Commit and push changes
+      if: steps.check_changes.outputs.has_changes == 'true'
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add .
+        git commit -m "Auto-update: Document changes detected $(date)"
+        git push
 </file>
 
 </files>
