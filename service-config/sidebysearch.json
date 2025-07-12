@@ -1,0 +1,9 @@
+{
+  "service": "SideBySearch",
+  "documents": {
+    "Privacy Policy": {
+      "url": "https://sidebysearch.org/privacy",
+      "selector": "main"
+    }
+  }
+}

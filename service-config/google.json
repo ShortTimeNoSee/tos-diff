@@ -1,0 +1,14 @@
+{
+  "service": "Google",
+  "documents": {
+    "Terms of Service": {
+      "url": "https://policies.google.com/terms",
+      "selector": "#main-content"
+    },
+    "Privacy Policy": {
+      "url": "https://policies.google.com/privacy",
+      "selector": "#main-content"
+    }
+  },
+  "aliases": ["Google", "Alphabet"]
+}
