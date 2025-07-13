@@ -1,0 +1,13 @@
+{
+  "service": "Yahoo",
+  "documents": {
+    "Terms of Service": {
+      "url": "https://legal.yahoo.com/us/en/yahoo/terms/otos/index.html",
+      "selector": "main"
+    },
+    "Privacy Policy": {
+      "url": "https://legal.yahoo.com/us/en/yahoo/privacy/index.html",
+      "selector": "main"
+    }
+  }
+} 

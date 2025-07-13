@@ -68,7 +68,9 @@ nav a:hover {
   color: var(--primary);
 }
 
-h1, h2, h3 {
+h1,
+h2,
+h3 {
   color: var(--text-primary);
   font-weight: 700;
 }

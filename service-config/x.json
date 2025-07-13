@@ -1,0 +1,89 @@
+{
+  "service": "X (formerly Twitter)",
+  "documents": {
+    "Terms of Service": {
+      "url": "https://x.com/en/tos",
+      "selector": "div.ct01__wrapper"
+    },
+    "Privacy Policy": {
+      "url": "https://x.com/en/privacy",
+      "selector": "div.root.responsivegrid"
+    },
+    "The X Rules": {
+      "url": "https://help.x.com/en/rules-and-policies/x-rules",
+      "selector": "div.root.responsivegrid"
+    },
+    "Information for Parents and Minor Users": {
+      "url": "https://help.x.com/en/rules-and-policies/information-for-parents-and-minor-users",
+      "selector": "div.ct01__column.twtr-col-md-8.none > div.ct01__wrapper"
+    },
+    "Authenticity": {
+      "url": "https://help.x.com/en/rules-and-policies/authenticity",
+      "selector": "div.root.responsivegrid"
+    },
+    "Civic Integrity Policy": {
+      "url": "https://help.x.com/en/rules-and-policies/election-integrity-policy",
+      "selector": "div.root.responsivegrid"
+    },
+    "Sensitive Media Policy": {
+      "url": "https://help.x.com/en/rules-and-policies/adult-content",
+      "selector": "div.root.responsivegrid"
+    },
+    "Abusive Behavior": {
+      "url": "https://help.x.com/en/rules-and-policies/abusive-behavior",
+      "selector": "div.root.responsivegrid"
+    },
+    "Child Safety": {
+      "url": "https://help.x.com/en/rules-and-policies/child-safety",
+      "selector": "div.root.responsivegrid"
+    },
+    "Non-consensual Nudity Policy": {
+      "url": "https://help.x.com/en/rules-and-policies/intimate-media",
+      "selector": "div.root.responsivegrid"
+    },
+    "Suicide and Self-harm Policy": {
+      "url": "https://help.x.com/en/rules-and-policies/glorifying-self-harm",
+      "selector": "div.root.responsivegrid"
+    },
+    "Hateful Conduct Policy": {
+      "url": "https://help.x.com/en/rules-and-policies/hateful-conduct-policy",
+      "selector": "div.root.responsivegrid"
+    },
+    "Perpetrators of Violent Attacks": {
+      "url": "https://help.x.com/en/rules-and-policies/perpetrators-of-violent-attacks",
+      "selector": "div.root.responsivegrid"
+    },
+    "Violent Content": {
+      "url": "https://help.x.com/en/rules-and-policies/violent-content",
+      "selector": "div.root.responsivegrid"
+    },
+    "Personal Information": {
+      "url": "https://help.x.com/en/rules-and-policies/personal-information",
+      "selector": "div.root.responsivegrid"
+    },
+    "Violent and Hateful Entities Policy": {
+      "url": "https://help.x.com/en/rules-and-policies/violent-entities",
+      "selector": "div.root.responsivegrid"
+    },
+    "Abusive Profile Information": {
+      "url": "https://help.x.com/en/rules-and-policies/abusive-profile",
+      "selector": "div.root.responsivegrid"
+    },
+    "Trademark Policy": {
+      "url": "https://help.x.com/en/rules-and-policies/x-trademark-policy",
+      "selector": "div.root.responsivegrid"
+    },
+    "Copyright Policy": {
+      "url": "https://help.x.com/en/rules-and-policies/copyright-policy",
+      "selector": "div.root.responsivegrid"
+    },
+    "Counterfeit Goods Policy": {
+      "url": "https://help.x.com/en/rules-and-policies/counterfeit-goods-policy",
+      "selector": "div.root.responsivegrid"
+    },
+    "Automated Claims Policy": {
+      "url": "https://help.x.com/en/rules-and-policies/automated-claims-policy",
+      "selector": "div.root.responsivegrid"
+    }
+  }
+} 

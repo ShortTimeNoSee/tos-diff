@@ -14,7 +14,18 @@
 <div class="service-grid">
   {#each data.services as service}
     <a href={`/services/${service.id}`} class="service-card">
+      <img src={`/favicons/${service.name}.ico`} alt="{service.name} Favicon" class="favicon" on:error={(e) => e.target.style.display = 'none'}>
       <h3>{service.name}</h3>
+      {#if service.lastUpdate}
+        <p class="last-update">
+          {#if service.updateType === 'change'}
+            Last change:
+          {:else}
+            No changes since
+          {/if}
+          {new Date(service.lastUpdate).toLocaleDateString()}
+        </p>
+      {/if}
     </a>
   {/each}
 </div>
@@ -48,9 +59,19 @@
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 2rem;
-    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
     text-decoration: none;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .favicon {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
   }
 
   .service-card:hover {
@@ -62,5 +83,11 @@
     margin: 0;
     font-size: 1.5rem;
     color: var(--text-primary);
+  }
+
+  .last-update {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin: 0;
   }
 </style>

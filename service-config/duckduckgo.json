@@ -1,0 +1,29 @@
+{
+  "service": "DuckDuckGo",
+  "documents": {
+    "Terms of Service": {
+      "url": "https://duckduckgo.com/terms",
+      "selector": "section.legal_content__mzrZi"
+    },
+    "Privacy Policy": {
+      "url": "https://duckduckgo.com/privacy",
+      "selector": "section.legal_content__mzrZi"
+    },
+    "Acceptable Use Policy": {
+      "url": "https://duckduckgo.com/acceptable-use",
+      "selector": "section.legal_section__BZR18"
+    },
+    "Duck.ai Privacy & Terms of Use": {
+      "url": "https://duckduckgo.com/duckai/privacy-terms",
+      "selector": ".content_root___2bzn"
+    },
+    "Privacy Pro (U.S.) Privacy Policy": {
+      "url": "https://duckduckgo.com/pro/privacy-terms/us",
+      "selector": "section.legal_content__mzrZi"
+    },
+    "Privacy Pro (non-U.S.) Privacy Policy": {
+      "url": "https://duckduckgo.com/pro/privacy-terms/non-us/en",
+      "selector": "section.legal_content__mzrZi"
+    }
+  }
+} 

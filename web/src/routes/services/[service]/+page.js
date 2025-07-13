@@ -8,8 +8,12 @@ export async function load({ params, fetch }) {
     }
     const { serviceName, documents: docNames } = await docsRes.json();
 
-    const slugify = (text) => text.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]+/g, '');
-    const promises = docNames.map(docName =>
+    const slugify = (text) =>
+      text
+        .toLowerCase()
+        .replace(/\s+/g, '-')
+        .replace(/[^\w-]+/g, '');
+    const promises = docNames.map((docName) =>
       fetch(`/data/${svc}/${slugify(docName)}/changes.json`)
     );
     const results = await Promise.allSettled(promises);
@@ -29,15 +33,14 @@ export async function load({ params, fetch }) {
     return {
       service: serviceName,
       documents,
-      activeTab: docNames.length > 0 ? docNames[0] : null
+      activeTab: docNames.length > 0 ? docNames[0] : null,
     };
-
   } catch (error) {
-    console.error("Failed to load service changes:", error);
+    console.error('Failed to load service changes:', error);
     return {
       service: params.service,
       documents: {},
-      activeTab: null
+      activeTab: null,
     };
   }
-} 
+}

@@ -8,7 +8,7 @@ export default {
       pages: 'build',
       assets: 'build',
       fallback: '200.html',
-      strict: false
-    })
-  }
+      strict: false,
+    }),
+  },
 };

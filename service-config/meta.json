@@ -1,0 +1,45 @@
+{
+  "service": "Meta",
+  "documents": {
+    "Privacy Policy": {
+      "url": "https://www.meta.com/legal/privacy-policy/",
+      "selector": "main"
+    },
+    "United States Regional Privacy Notice": {
+      "url": "https://www.meta.com/legal/united-states/",
+      "selector": "main"
+    },
+    "Terms of Use": {
+      "url": "https://mbasic.facebook.com/legal/terms/plain_text_terms/",
+      "selector": "body"
+    },
+    "Open Source Privacy Policy": {
+      "url": "https://opensource.fb.com/legal/privacy/",
+      "selector": "section.py-sm-50.py-100"
+    },
+    "Platform Terms": {
+      "url": "https://developers.facebook.com/terms/",
+      "selector": "div._4bl9._2pis[data-testid=\"platform_terms_page_content\"]"
+    },
+    "Avatars Terms of Service": {
+      "url": "https://mbasic.facebook.com/legal/avatars_terms",
+      "selector": "body"
+    },
+    "AI Terms of Service": {
+      "url": "https://mbasic.facebook.com/legal/ai-terms",
+      "selector": "body"
+    },
+    "UK AI Terms of Service": {
+      "url": "https://mbasic.facebook.com/legal/uk-ai-terms",
+      "selector": "body"
+    },
+    "Brazil AI Terms of Service": {
+      "url": "https://mbasic.facebook.com/legal/br-ai-terms",
+      "selector": "body"
+    },
+    "EU AI Terms of Service": {
+      "url": "https://mbasic.facebook.com/legal/eu-ai-terms",
+      "selector": "body"
+    }
+  }
+} 

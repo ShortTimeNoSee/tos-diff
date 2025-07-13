@@ -1,0 +1,25 @@
+{
+  "service": "Microsoft",
+  "documents": {
+    "Services Agreement": {
+      "url": "https://www.microsoft.com/en-us/servicesagreement",
+      "selector": "div.aem-Grid.aem-Grid--12.aem-Grid--default--12"
+    },
+    "Terms of Use": {
+      "url": "https://www.microsoft.com/en-us/legal/terms-of-use",
+      "selector": "main"
+    },
+    "Privacy Statement": {
+      "url": "https://www.microsoft.com/en-us/privacy/privacystatement",
+      "selector": "div.col.text-md-left.no-gutters.col-12.col-sm-6.col-md-8[data-automation-test-id=\"column-layout-container-uid4635\"]"
+    },
+    "Learn Terms of Use": {
+      "url": "https://learn.microsoft.com/en-us/legal/termsofuse",
+      "selector": "main"
+    },
+    "Office Developer Program Terms": {
+      "url": "https://learn.microsoft.com/en-us/office/developer-program/terms-and-conditions",
+      "selector": "main"
+    }
+  }
+} 

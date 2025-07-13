@@ -1,0 +1,49 @@
+{
+  "service": "Facebook",
+  "documents": {
+    "Privacy Policy": {
+      "url": "https://mbasic.facebook.com/privacy/policy/printable/",
+      "selector": "body"
+    },
+    "Community Standards": {
+      "url": "https://transparency.meta.com/policies/community-standards/",
+      "selector": "section._9ntw._9nty._9nu2"
+    },
+    "Commercial Terms": {
+      "url": "https://mbasic.facebook.com/legal/commercial_terms",
+      "selector": "body"
+    },
+    "Payments Terms": {
+      "url": "https://mbasic.facebook.com/payments_terms",
+      "selector": "body"
+    },
+    "Commerce Policies": {
+      "url": "https://mbasic.facebook.com/policies/commerce",
+      "selector": "body"
+    },
+    "Music Guidelines": {
+      "url": "https://mbasic.facebook.com/legal/music_guidelines",
+      "selector": "body"
+    },
+    "Self-Service Ad Terms": {
+      "url": "https://mbasic.facebook.com/legal/self_service_ads_terms",
+      "selector": "body"
+    },
+    "Pages, Groups and Events Policies": {
+      "url": "https://mbasic.facebook.com/policies/pages_groups_events",
+      "selector": "body"
+    },
+    "Developer Payments Terms": {
+      "url": "https://developers.facebook.com/policy/credits",
+      "selector": "div._4-u2._57mb._1u44._3fw6._4-u8"
+    },
+    "Recommendations Guidelines": {
+      "url": "https://mbasic.facebook.com/help/1257205004624246/",
+      "selector": "body"
+    },
+    "Live Policies": {
+      "url": "https://mbasic.facebook.com/policies/live",
+      "selector": "body"
+    }
+  }
+}
