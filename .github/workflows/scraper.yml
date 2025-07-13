@@ -49,4 +49,4 @@ jobs:
         git config --local user.name "GitHub Action"
         git add .
         git commit -m "Auto-update: Document changes detected $(date)"
-        git push 
+        git push
