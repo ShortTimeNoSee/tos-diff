@@ -1,217 +1,306 @@
 <script>
-  export let data;
+	export let data;
 
-  let activeTab = data.activeTab;
+	let activeTab = data.activeTab;
 
-  function setActiveTab(tab) {
-    activeTab = tab;
-  }
+	function setActiveTab(tab) {
+		activeTab = tab;
+		const url = new URL(window.location);
+		url.searchParams.set('policy', tab);
+		window.history.replaceState({}, '', url);
+	}
 
-  async function copyToClipboard(text) {
-    try {
-      await navigator.clipboard.writeText(text);
-      alert('Hash copied to clipboard!');
-    } catch (err) {
-      console.error('Failed to copy text: ', err);
-    }
-  }
+	async function copyToClipboard(text) {
+		try {
+			await navigator.clipboard.writeText(text);
+			alert('Hash copied to clipboard!');
+		} catch (err) {
+			console.error('Failed to copy text: ', err);
+		}
+	}
 </script>
 
-<h1>{data.service} Legal Document Changes</h1>
+<svelte:head>
+	<title>{data.service} | Legal Changes</title>
+</svelte:head>
 
-{#if data.documents && Object.keys(data.documents).length > 0}
-  <div class="tabs">
-    {#each Object.keys(data.documents) as docName}
-      <button
-        class:active={activeTab === docName}
-        on:click={() => setActiveTab(docName)}
-        disabled={data.documents[docName].changes.length === 0}
-      >
-        {docName} ({data.documents[docName].changes.length})
-      </button>
-    {/each}
-  </div>
+<div class="page-layout">
+	{#if data.documents && Object.keys(data.documents).length > 0}
+		<aside class="sidebar glass">
+			<nav>
+				<h4>Documents</h4>
+				<ul>
+					{#each Object.keys(data.documents) as docName}
+						<li>
+							<button
+								class:active={activeTab === docName}
+								on:click={() => setActiveTab(docName)}
+							>
+								<span>{docName}</span>
+								<span class="change-count">{data.documents[docName].changes.length}</span>
+							</button>
+						</li>
+					{/each}
+				</ul>
+			</nav>
+		</aside>
 
-  {#if activeTab && data.documents[activeTab]}
-    {@const currentDoc = data.documents[activeTab]}
-    <div class="content">
-      {#if currentDoc.changes.length === 0}
-        <p>No {activeTab} changes detected yet.</p>
-      {:else}
-        {#each currentDoc.changes as change}
-          <section>
-            <div class="change-meta">
-              <h2>{new Date(change.timestamp).toLocaleString()}</h2>
-              <div class="meta-controls">
-                {#if change.sourceHtmlFile}
-                  <a href="/data/{data.service.toLowerCase()}/{activeTab.toLowerCase().replace(/\s+/g, '-')}/{change.sourceHtmlFile}" target="_blank" class="source-link">
-                    View Source
-                  </a>
-                {/if}
-                {#if change.sourceHash}
-                  <button
-                    type="button"
-                    class="source-hash"
-                    title="Click to copy full hash: {change.sourceHash}"
-                    on:click={() => copyToClipboard(change.sourceHash)}
-                  >
-                    Source Hash: {change.sourceHash.substring(0, 12)}...
-                  </button>
-                {/if}
-              </div>
-            </div>
-            <div class="summary">
-              {@html change.summary.join('')}
-            </div>
-            <details>
-              <summary>View full diff</summary>
-              <div class="diff">
-                {@html change.diffHtml}
-              </div>
-            </details>
-          </section>
-        {/each}
-      {/if}
-    </div>
-  {/if}
-{:else}
-  <p>No documents are configured for this service yet.</p>
-{/if}
+		<div class="content">
+			{#if activeTab && data.documents[activeTab]}
+				{@const currentDoc = data.documents[activeTab]}
+				<div class="content-header">
+					<h1>{activeTab}</h1>
+					<p>Last checked: {new Date(currentDoc.lastChecked).toLocaleString()}</p>
+				</div>
+
+				{#if currentDoc.changes.length === 0}
+					<div class="no-changes glass">
+						<p>No changes detected for {activeTab}.</p>
+					</div>
+				{:else}
+					{#each currentDoc.changes as change}
+						<section class="change-card glass">
+							<div class="change-meta">
+								<h2 class="timestamp">{new Date(change.timestamp).toLocaleString()}</h2>
+								<div class="meta-controls">
+									{#if change.sourceHtmlFile}
+										<a
+											href="/data/{data.service.toLowerCase()}/{activeTab
+												.toLowerCase()
+												.replace(/\s+/g, '-')}/{change.sourceHtmlFile}"
+											target="_blank"
+											class="source-link"
+										>
+											View Source
+										</a>
+									{/if}
+									{#if change.sourceHash}
+										<button
+											type="button"
+											class="source-hash"
+											title="Click to copy full hash: {change.sourceHash}"
+											on:click={() => copyToClipboard(change.sourceHash)}
+										>
+											<span class="hash-short">{change.sourceHash.substring(0, 12)}...</span>
+											<span class="hash-full">{change.sourceHash}</span>
+										</button>
+									{/if}
+								</div>
+							</div>
+							<div class="summary">
+								{@html change.summary.join('')}
+							</div>
+							<details>
+								<summary>View full diff</summary>
+								<div class="diff">
+									{@html change.diffHtml}
+								</div>
+							</details>
+						</section>
+					{/each}
+				{/if}
+			{/if}
+		</div>
+	{:else}
+		<div class="no-changes glass">
+			<p>No documents are configured for this service yet.</p>
+		</div>
+	{/if}
+</div>
 
 <style>
-  h1 {
-    text-transform: none;
-  }
-  .tabs {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 2rem;
-    border-bottom: 1px solid var(--border);
-  }
+	.page-layout {
+		display: grid;
+		grid-template-columns: 280px 1fr;
+		gap: 2rem;
+		align-items: flex-start;
+	}
 
-  .tabs button {
-    padding: 0.75rem 1.25rem;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    border-radius: 6px 6px 0 0;
-    font-size: 1rem;
-    color: var(--text-secondary);
-    position: relative;
-    top: 1px;
-    transition: background-color 0.2s ease, color 0.2s ease;
-  }
+	.sidebar {
+		position: sticky;
+		top: calc(2rem + 100px); /* Header height + margin */
+		padding: 1.5rem;
+	}
 
-  .tabs button:disabled {
-    color: var(--text-secondary);
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+	.sidebar h4 {
+		font-size: 0.8rem;
+		text-transform: uppercase;
+		letter-spacing: 0.1em;
+		color: var(--text-secondary);
+		margin: 0 0 1rem 0;
+		padding: 0 1rem;
+	}
 
-  .tabs button.active {
-    background: var(--background);
-    color: var(--primary);
-    border-bottom: 2px solid var(--primary);
-  }
+	.sidebar ul {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+	}
 
-  .tabs button:not(.active):not(:disabled):hover {
-    background-color: var(--surface);
-    color: var(--text-primary);
-  }
+	.sidebar button {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		width: 100%;
+		padding: 0.75rem 1rem;
+		border: none;
+		background: transparent;
+		cursor: pointer;
+		font-size: 1rem;
+		color: var(--text-secondary);
+		border-radius: 12px;
+		text-align: left;
+		transition: all var(--transition-speed) ease;
+	}
 
-  .content {
-    margin-top: 1rem;
-  }
+	.sidebar button:hover {
+		background: var(--glass-border);
+		color: var(--text-primary);
+	}
 
-  section {
-    margin-bottom: 2rem;
-    padding: 1.5rem;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background-color: var(--surface);
-  }
+	.sidebar button.active {
+		background: var(--accent);
+		color: white;
+		font-weight: 700;
+	}
 
-  .change-meta {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-  }
+	@media (prefers-color-scheme: dark) {
+		.sidebar button.active {
+			color: var(--background-dark);
+		}
+	}
 
-  .meta-controls {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
+	.change-count {
+		font-size: 0.8rem;
+		background: rgba(0, 0, 0, 0.1);
+		padding: 0.1rem 0.4rem;
+		border-radius: 6px;
+	}
+	.sidebar button.active .change-count {
+		background: rgba(255, 255, 255, 0.2);
+	}
 
-  section h2 {
-    font-size: 1rem;
-    font-weight: normal;
-    color: var(--text-secondary);
-    margin: 0;
-  }
+	.content-header {
+		margin-bottom: 2rem;
+	}
 
-  .source-link {
-    font-size: 0.8em;
-    color: var(--text-secondary);
-    text-decoration: none;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-  }
+	.content-header h1 {
+		font-size: 3rem;
+		margin: 0 0 0.5rem 0;
+	}
 
-  .source-link:hover {
-    background-color: var(--border);
-    text-decoration: underline;
-  }
+	.content-header p {
+		font-size: 1rem;
+		color: var(--text-secondary);
+	}
 
-  .source-hash {
-    font-family: 'Roboto Mono', monospace;
-    font-size: 0.8em;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    transition: background-color 0.2s;
-    background: none;
-    border: none;
-    text-align: left;
-  }
+	.no-changes {
+		padding: 4rem;
+		text-align: center;
+	}
 
-  .source-hash:hover {
-    background-color: var(--border);
-  }
+	.no-changes p {
+		font-size: 1.2rem;
+		color: var(--text-secondary);
+	}
 
-  .summary {
-    margin: 1rem 0;
-  }
+	.change-card {
+		margin-bottom: 2rem;
+		padding: 2rem;
+	}
 
-  .summary :global(p) {
-    margin: 0.5rem 0;
-  }
+	.change-meta {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		margin-bottom: 1.5rem;
+		padding-bottom: 1.5rem;
+		border-bottom: 1px solid var(--glass-border);
+	}
 
-  details {
-    margin-top: 1.5rem;
-  }
+	.meta-controls {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+	}
 
-  details summary {
-    cursor: pointer;
-    font-weight: bold;
-    color: var(--text-secondary);
-  }
+	.timestamp {
+		font-size: 1rem;
+		font-weight: 500;
+		color: var(--text-secondary);
+		margin: 0;
+	}
 
-  details summary:hover {
-    color: var(--primary);
-  }
+	.source-link,
+	.source-hash {
+		font-size: 0.9rem;
+		color: var(--text-secondary);
+		text-decoration: none;
+		padding: 0.5rem 1rem;
+		border-radius: 999px;
+		transition: all var(--transition-speed) ease;
+		background-color: transparent;
+		border: 1px solid var(--glass-border);
+		cursor: pointer;
+	}
 
-  .diff {
-    margin-top: 1rem;
-    padding: 1rem;
-    background: var(--background);
-    border-radius: 4px;
-    font-family: 'Roboto Mono', monospace;
-    white-space: pre-wrap;
-    font-size: 0.9em;
-    border: 1px solid var(--border);
-  }
+	.source-link:hover,
+	.source-hash:hover {
+		background-color: var(--glass-border);
+		color: var(--text-primary);
+		border-color: transparent;
+	}
+
+	.source-hash {
+		font-family: 'Roboto Mono', monospace;
+	}
+	.source-hash .hash-full {
+		display: none;
+	}
+
+	.summary {
+		margin: 1.5rem 0;
+		font-size: 1.1rem;
+		line-height: 1.7;
+	}
+
+	.summary :global(p) {
+		margin: 0.5rem 0;
+	}
+
+	details {
+		margin-top: 1.5rem;
+	}
+
+	details summary {
+		cursor: pointer;
+		font-weight: 700;
+		color: var(--text-primary);
+		padding: 0.5rem;
+		border-radius: 8px;
+	}
+
+	details summary:hover {
+		background: var(--glass-border);
+	}
+
+	.diff {
+		margin-top: 1rem;
+		padding: 1.5rem;
+		background: rgba(0, 0, 0, 0.05);
+		border-radius: 12px;
+		font-family: 'Roboto Mono', monospace;
+		white-space: pre-wrap;
+		font-size: 0.9em;
+		border: 1px solid var(--glass-border);
+	}
+
+	@media (prefers-color-scheme: dark) {
+		.diff {
+			background: rgba(0, 0, 0, 0.2);
+		}
+	}
 </style>

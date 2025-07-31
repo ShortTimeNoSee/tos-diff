@@ -1,5 +1,5 @@
 {
-  "service": "X (formerly Twitter)",
+  "service": "X",
   "documents": {
     "Terms of Service": {
       "url": "https://x.com/en/tos",
@@ -86,4 +86,4 @@
       "selector": "div.root.responsivegrid"
     }
   }
-} 
+}

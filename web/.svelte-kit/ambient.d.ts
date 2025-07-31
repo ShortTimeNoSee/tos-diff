@@ -38,7 +38,7 @@ declare module '$env/static/private' {
 	export const HOME: string;
 	export const CHROME_DESKTOP: string;
 	export const APPDIR: string;
-	export const OLDPWD: string;
+	export const DISABLE_AUTO_UPDATE: string;
 	export const TERM_PROGRAM_VERSION: string;
 	export const DESKTOP_SESSION: string;
 	export const NVM_BIN: string;
@@ -47,11 +47,13 @@ declare module '$env/static/private' {
 	export const PERLLIB: string;
 	export const GNOME_SHELL_SESSION_MODE: string;
 	export const GTK_MODULES: string;
+	export const PAGER: string;
 	export const VSCODE_GIT_ASKPASS_MAIN: string;
 	export const VSCODE_GIT_ASKPASS_NODE: string;
 	export const MANAGERPID: string;
 	export const npm_config_userconfig: string;
 	export const npm_config_local_prefix: string;
+	export const npm_config_yes: string;
 	export const DBUS_STARTER_BUS_TYPE: string;
 	export const SYSTEMD_EXEC_PID: string;
 	export const GSM_SKIP_SSH_AGENT_WORKAROUND: string;
@@ -73,6 +75,7 @@ declare module '$env/static/private' {
 	export const TERM: string;
 	export const npm_config_cache: string;
 	export const GNOME_DESKTOP_SESSION_ID: string;
+	export const COMPOSER_NO_INTERACTION: string;
 	export const WINDOWPATH: string;
 	export const npm_config_node_gyp: string;
 	export const PATH: string;
@@ -119,6 +122,7 @@ declare module '$env/static/private' {
 	export const npm_config_global_prefix: string;
 	export const npm_command: string;
 	export const QT_PLUGIN_PATH: string;
+	export const PIP_NO_INPUT: string;
 	export const MEMORY_PRESSURE_WRITE: string;
 	export const INIT_CWD: string;
 	export const EDITOR: string;
@@ -166,7 +170,7 @@ declare module '$env/dynamic/private' {
 		HOME: string;
 		CHROME_DESKTOP: string;
 		APPDIR: string;
-		OLDPWD: string;
+		DISABLE_AUTO_UPDATE: string;
 		TERM_PROGRAM_VERSION: string;
 		DESKTOP_SESSION: string;
 		NVM_BIN: string;
@@ -175,11 +179,13 @@ declare module '$env/dynamic/private' {
 		PERLLIB: string;
 		GNOME_SHELL_SESSION_MODE: string;
 		GTK_MODULES: string;
+		PAGER: string;
 		VSCODE_GIT_ASKPASS_MAIN: string;
 		VSCODE_GIT_ASKPASS_NODE: string;
 		MANAGERPID: string;
 		npm_config_userconfig: string;
 		npm_config_local_prefix: string;
+		npm_config_yes: string;
 		DBUS_STARTER_BUS_TYPE: string;
 		SYSTEMD_EXEC_PID: string;
 		GSM_SKIP_SSH_AGENT_WORKAROUND: string;
@@ -201,6 +207,7 @@ declare module '$env/dynamic/private' {
 		TERM: string;
 		npm_config_cache: string;
 		GNOME_DESKTOP_SESSION_ID: string;
+		COMPOSER_NO_INTERACTION: string;
 		WINDOWPATH: string;
 		npm_config_node_gyp: string;
 		PATH: string;
@@ -247,6 +254,7 @@ declare module '$env/dynamic/private' {
 		npm_config_global_prefix: string;
 		npm_command: string;
 		QT_PLUGIN_PATH: string;
+		PIP_NO_INPUT: string;
 		MEMORY_PRESSURE_WRITE: string;
 		INIT_CWD: string;
 		EDITOR: string;

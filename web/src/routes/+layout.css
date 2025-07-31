@@ -1,80 +1,138 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap');
+
 :root {
-  --background: #112;
-  --surface: #223;
-  --primary: #48f;
-  --on-primary: #fff;
-  --text-primary: #eee;
-  --text-secondary: #ccc;
-  --border: #334;
-  --added-bg: #4ba1;
-  --removed-bg: #f431;
-  --added-color: #48f;
-  --removed-color: #f44;
+  --font-sans: 'Inter', sans-serif;
+
+  /* Light Theme */
+  --background-light: #f0f2f5;
+  --background-gradient-start-light: #e0e7ff;
+  --background-gradient-end-light: #f8f9fa;
+  --glass-bg-light: rgba(255, 255, 255, 0.6);
+  --glass-border-light: rgba(255, 255, 255, 0.8);
+  --text-primary-light: #1a1a1a;
+  --text-secondary-light: #555;
+  --accent-light: #007aff;
+  --accent-glow-start-light: rgba(0, 122, 255, 0.5);
+  --accent-glow-end-light: rgba(0, 122, 255, 0);
+
+  /* Dark Theme */
+  --background-dark: #0a0a0c;
+  --background-gradient-start-dark: #0d1a2f;
+  --background-gradient-end-dark: #0a0a0c;
+  --glass-bg-dark: rgba(20, 20, 30, 0.5);
+  --glass-border-dark: rgba(255, 255, 255, 0.1);
+  --text-primary-dark: #f0f0f5;
+  --text-secondary-dark: #a0a0b0;
+  --accent-dark: #00aaff;
+  --accent-glow-start-dark: rgba(0, 170, 255, 0.4);
+  --accent-glow-end-dark: rgba(0, 170, 255, 0);
+
+  --border-radius: 1.25rem; /* 20px */
+  --transition-speed: 0.3s;
 }
 
-.added {
-  background-color: var(--added-bg);
-  color: var(--added-color);
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: var(--background-light);
+    --bg-grad-start: var(--background-gradient-start-light);
+    --bg-grad-end: var(--background-gradient-end-light);
+    --glass-bg: var(--glass-bg-light);
+    --glass-border: var(--glass-border-light);
+    --text-primary: var(--text-primary-light);
+    --text-secondary: var(--text-secondary-light);
+    --accent: var(--accent-light);
+    --accent-glow-start: var(--accent-glow-start-light);
+    --accent-glow-end: var(--accent-glow-end-light);
+  }
 }
-.removed {
-  background-color: var(--removed-bg);
-  color: var(--removed-color);
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: var(--background-dark);
+    --bg-grad-start: var(--background-gradient-start-dark);
+    --bg-grad-end: var(--background-gradient-end-dark);
+    --glass-bg: var(--glass-bg-dark);
+    --glass-border: var(--glass-border-dark);
+    --text-primary: var(--text-primary-dark);
+    --text-secondary: var(--text-secondary-dark);
+    --accent: var(--accent-dark);
+    --accent-glow-start: var(--accent-glow-start-dark);
+    --accent-glow-end: var(--accent-glow-end-dark);
+  }
 }
 
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-sans);
   margin: 0;
   padding: 0;
-  background-color: var(--background);
+  background-color: var(--bg);
+  background-image: radial-gradient(circle at 10% 10%, var(--bg-grad-start) 0%, var(--bg-grad-end) 50%);
   color: var(--text-primary);
   line-height: 1.6;
+  overflow-x: hidden;
+  min-height: 100vh;
 }
 
-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem 2rem;
-  border-bottom: 1px solid var(--border);
+.glass {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--glass-border);
+  transition: all var(--transition-speed) ease-out;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
 }
 
-.logo {
+h1, h2, h3, h4, h5, h6 {
   font-weight: 700;
-  font-size: 1.2rem;
-  text-decoration: none;
   color: var(--text-primary);
+  letter-spacing: -0.02em;
 }
 
-main {
-  padding: 2rem;
-}
+h1 { font-size: 3rem; font-weight: 900; letter-spacing: -0.05em; line-height: 1.1; }
+h2 { font-size: 2.25rem; }
+h3 { font-size: 1.75rem; }
 
-nav {
-  display: flex;
-  gap: 1.5rem;
-  padding-bottom: 2rem;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 2rem;
-}
-
-nav a {
-  text-decoration: none;
-  font-weight: bold;
+p {
   color: var(--text-secondary);
-  transition: color 0.2s ease-in-out;
-}
-
-nav a:hover {
-  color: var(--primary);
-}
-
-h1,
-h2,
-h3 {
-  color: var(--text-primary);
-  font-weight: 700;
 }
 
 a {
-  color: var(--primary);
+  color: var(--accent);
+  text-decoration: none;
+  transition: color var(--transition-speed) ease;
+}
+
+a:hover {
+  filter: brightness(1.2);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--glass-bg);
+  border-radius: 10px;
+  border: 1px solid var(--glass-border);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+@media (prefers-color-scheme: dark) {
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
 }
